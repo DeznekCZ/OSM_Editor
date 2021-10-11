@@ -1,6 +1,9 @@
 package cz.deznekcz.csl.osmeditor.data;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 import cz.deznekcz.csl.osmeditor.ui.ExtendedLine;
 import cz.deznekcz.csl.osmeditor.ui.Line;
@@ -9,10 +12,131 @@ import cz.deznekcz.csl.osmeditor.ui.OSMWayInfo;
 import cz.deznekcz.csl.osmeditor.ui.Painter;
 import cz.deznekcz.csl.osmeditor.ui.Road;
 import cz.deznekcz.csl.osmeditor.ui.Zone;
+import cz.deznekcz.csl.osmeditor.ui.Shape;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.util.Pair;
 
 public class OSMConfig {
+
+	private Map<String, Map<String, Function<OSMRelation, Painter>[]>> relationConfig;
+	private Map<String, Map<String, Function<OSMWay, Painter>[]>> wayConfig;
+	private Map<String, Map<String, Function<OSMNode, Painter>[]>> nodeConfig;
+	
+	public OSMConfig() {
+		relationConfig = filter(
+				group("landuse", 
+						entry("forest", (relation) -> new Zone(relation, Color.DARKGREEN)),
+						entry("meadow", (relation) -> new Zone(relation, Color.YELLOWGREEN)),
+						entry("farmland", (relation) -> new Zone(relation, Color.YELLOW))
+				),
+				group("natural", 
+						entry("water", (relation) -> new Zone(relation, Color.LIGHTSKYBLUE))
+				)
+		);
+		
+		wayConfig = filter(
+				group("highway",
+						entry("primary", (way) -> new Road(way, 6, Color.ORANGE)),
+						entrySame("primary_link"),
+						entry("secondary", (way) -> new Road(way, 5, Color.YELLOW)),
+						entrySame("secondary_link"),
+						entry("tertiary", (way) -> new Road(way, 4, Color.LIGHTYELLOW)),
+						entrySame("tertiary_link"),
+						entry("unclassified", (way) -> new Road(way, 4, Color.WHITE)),
+						entrySame("residential"),
+						entrySame("service")
+				),
+				group("railway",
+						entry("rail", (way) -> new ExtendedLine(
+								way,
+								(x,y,gc) -> {
+									if (is(way.getTags(), "bridge", "yes"))
+									{
+										gc.setStroke(Color.GRAY);
+										gc.setLineWidth(4);
+										gc.setLineCap(StrokeLineCap.BUTT);
+										gc.strokePolyline(x, y, x.length);
+									}
+									
+									gc.setStroke(Color.GRAY);
+									gc.setLineWidth(3);
+									gc.setLineCap(StrokeLineCap.BUTT);
+									gc.strokePolyline(x, y, x.length);
+
+									gc.setStroke(Color.WHITE);
+									gc.setLineWidth(2);
+									gc.setLineCap(StrokeLineCap.ROUND);
+									gc.strokePolyline(x, y, x.length);
+									
+									gc.setStroke(Color.BLACK);
+									gc.setLineCap(StrokeLineCap.BUTT);
+									gc.setLineWidth(2);
+									var defaultDashes = gc.getLineDashes();
+									gc.setLineDashes(new double[] {5,5,5});
+									gc.strokePolyline(x, y, x.length);
+									
+									gc.setLineDashes(defaultDashes);
+								}
+							)),
+						entry("platform", (way) -> new Line(way, 1, Color.GRAY)),
+						entry("disused", (way) -> new ExtendedLine(
+								way,
+								(x,y,gc) -> {
+									gc.setStroke(Color.GRAY);
+									gc.setLineWidth(3);
+									gc.setLineCap(StrokeLineCap.BUTT);
+									gc.strokePolyline(x, y, x.length);
+
+									gc.setStroke(Color.WHITE);
+									gc.setLineWidth(2);
+									gc.setLineCap(StrokeLineCap.ROUND);
+									gc.strokePolyline(x, y, x.length);
+									
+									gc.setStroke(Color.GRAY.interpolate(Color.GREEN, 0.5));
+									gc.setLineCap(StrokeLineCap.BUTT);
+									gc.setLineWidth(2);
+									var defaultDashes = gc.getLineDashes();
+									gc.setLineDashes(new double[] {5,5,5});
+									gc.strokePolyline(x, y, x.length);
+									
+									gc.setLineDashes(defaultDashes);
+								}
+							)),
+						entrySame("dismantled")
+				),
+				group("power",
+						entry("line", (way) -> new Line(way, 2, Color.BLACK.interpolate(Color.TRANSPARENT, 0.5))),
+						entry("minor_line", (way) -> new Line(way, 1, Color.BLACK.interpolate(Color.TRANSPARENT, 0.5)))
+				),
+				groupAny("building",
+						(way) -> new Shape(way, Color.RED.brighter())
+				)
+		);
+		
+		nodeConfig = filter(
+				group("place", 
+						entry("village", (node) -> (gc,map,bd) -> {
+							var point = Painter.GetPoint(node, map, bd);
+							gc.setStroke(Color.BLACK);
+							gc.setLineWidth(1);
+							gc.strokeText(node.getTags().get("name"), point.getX(), point.getY());
+						})
+				),
+				group("power",
+						entry("pole", (node) -> (gc,map,bd) -> {
+							var point = Painter.GetPoint(node, map, bd);
+							gc.setStroke(Color.BLACK);
+							gc.setLineWidth(1);
+							gc.strokeOval(point.getX() - 1, point.getY() - 1, 2, 2);
+						})
+				)
+		);
+	}
+
+	public static boolean is(Map<String, String> tags, String key, String string) {
+		return string.equals(tags.getOrDefault(key, null));
+	}
 
 	public OSMNodeInfo getInfo(OSMNode node) {
 		if (node.getTags().isEmpty())
@@ -20,37 +144,7 @@ public class OSMConfig {
 		
 		var painters = new ArrayList<Painter>();
 		
-		for (var nodeTag : node.getTags().keySet()) {
-			switch (nodeTag) {
-			case "power": {
-				switch (node.getTags().get("power")) {
-				case "pole":
-					painters.add((gc,map,bd) -> {
-						var point = Painter.GetPoint(node, map, bd);
-						gc.setStroke(Color.BLACK);
-						gc.setLineWidth(1);
-						gc.strokeOval(point.getX() - 1, point.getY() - 1, 2, 2);
-					});
-					break;
-
-				default:
-					break;
-				}
-				break;
-			}
-			case "name": {
-				painters.add((gc,map,bd) -> {
-					var point = Painter.GetPoint(node, map, bd);
-					gc.setStroke(Color.BLACK);
-					gc.setLineWidth(1);
-					gc.strokeText(node.getTags().get("name"), point.getX(), point.getY());
-				});
-				break;
-			}
-			default:
-				break;
-			}
-		}
+		get(nodeConfig, node, painters);
 		
 		if (painters.isEmpty())
 			return null;
@@ -63,71 +157,8 @@ public class OSMConfig {
 			return null;
 		
 		var painters = new ArrayList<Painter>();
-		
-		for (var nodeTag : way.getTags().keySet()) {
-			switch (nodeTag) {
-			case "power": {
-				painters.add(new Line(way, 1, Color.BLACK));
-				break;
-			}
-			case "railway": {
-				painters.add(new ExtendedLine(
-					way,
-					(x,y,gc) -> {
-						gc.setStroke(Color.GRAY);
-						gc.setLineWidth(6);
-						gc.setLineCap(StrokeLineCap.BUTT);
-						gc.strokePolyline(x, y, x.length);
 
-						gc.setStroke(Color.WHITE);
-						gc.setLineWidth(4);
-						gc.setLineCap(StrokeLineCap.ROUND);
-						gc.strokePolyline(x, y, x.length);
-						
-						gc.setStroke(Color.BLACK);
-						gc.setLineCap(StrokeLineCap.BUTT);
-						gc.setLineWidth(4);
-						var defaultDashes = gc.getLineDashes();
-						gc.setLineDashes(new double[] {5,5,5});
-						gc.strokePolyline(x, y, x.length);
-						
-						gc.setLineDashes(defaultDashes);
-					}
-				));
-				break;
-			}
-			case "highway": {
-				switch (way.getTags().get("highway")) {
-				case "primary":
-				case "primary_link":
-					painters.add(new Road(way, 4, Color.ORANGE, Color.DARKORANGE));
-					break;
-
-				case "secondary":
-				case "secondary_link":
-					painters.add(new Road(way, 4, Color.YELLOW, Color.BROWN));
-					break;
-
-				case "tertiary":
-				case "tertiary_link":
-					painters.add(new Road(way, 4, Color.LIGHTYELLOW, Color.BROWN));
-					break;
-					
-				case "unclassified":
-				case "residential":
-				case "service":
-					painters.add(new Road(way, 4, Color.WHITE, Color.GRAY));
-					break;
-					
-				default:
-					break;
-				}
-				break;
-			}
-			default:
-				break;
-			}
-		}
+		get(wayConfig, way, painters);
 		
 		if (painters.isEmpty())
 			return null;
@@ -140,46 +171,80 @@ public class OSMConfig {
 			return null;
 		
 		var painters = new ArrayList<Painter>();
-		
-		for (var nodeTag : relation.getTags().keySet()) {
-			switch (nodeTag) {
-				case "landuse":
-					switch (relation.getTags().get("landuse")) {
-					case "forest":
-						painters.add(new Zone(relation, Color.DARKGREEN, Color.DARKGREEN.darker()));
-						break;
 
-					case "meadow":
-						painters.add(new Zone(relation, Color.YELLOWGREEN, Color.YELLOWGREEN.darker()));
-						break;
-						
-					case "farmland":
-						painters.add(new Zone(relation, Color.YELLOW, Color.YELLOW.darker()));
-						break;
-
-					default:
-						break;
-					}
-					break;
-					
-				case "natural":
-					switch (relation.getTags().get("natural")) {
-					case "water":
-						painters.add(new Zone(relation, Color.LIGHTSKYBLUE, Color.LIGHTSKYBLUE.darker()));
-						break;
-
-					default:
-						break;
-					}
-			
-				default:
-					break;
-			}
-		}
+		get(relationConfig, relation, painters);
 		
 		if (painters.isEmpty())
 			return null;
 		
 		return new OSMRelationInfo(painters);
+	}
+
+	public <T extends AOSMItem> void get(Map<String, Map<String, Function<T, Painter>[]>> config, T relation,
+			ArrayList<Painter> painters) {
+		
+		for (var key : config.keySet()) {
+			String group;
+			if ((group = relation.getTags().getOrDefault(key, null)) != null) {
+				Function<T, Painter>[] entry;
+				var keyConfig = config.get(key);
+				if ((entry = keyConfig.getOrDefault(group, null)) != null) {
+					for (var painter : entry) {
+						painters.add(painter.apply(relation));
+					}
+				} else if ((entry = keyConfig.getOrDefault("*", null)) != null) {
+					for (var painter : entry) {
+						painters.add(painter.apply(relation));
+					}
+				}
+			}
+		}
+	}
+
+	@SafeVarargs
+	public static <T extends AOSMItem> Map<String, Map<String, Function<T, Painter>[]>> filter(Pair<String, Map<String, Function<T,Painter>[]>>...groups) {
+		Map<String, Map<String, Function<T,Painter>[]>> map = new HashMap<>();
+		
+		for (var group : groups) {
+			map.put(group.getKey(), group.getValue());
+		}
+		
+		return map;
+	}
+
+	@SafeVarargs
+	public static <T extends AOSMItem> Pair<String, Map<String, Function<T,Painter>[]>> group(String string, Pair<String, Function<T, Painter>[]>...entries) {
+		Map<String, Function<T,Painter>[]> map = new HashMap<>();
+		
+		Function<T, Painter>[] last = null;
+		for (var entry : entries) {
+			Function<T, Painter>[] newValue = entry.getValue();
+			
+			if (newValue != null)
+				last = newValue;
+			
+			map.put(entry.getKey(), last);
+			
+		}
+		
+		return new Pair<>(string, map);
+	}
+
+	@SafeVarargs
+	public static <T extends AOSMItem> Pair<String, Map<String, Function<T,Painter>[]>> groupAny(String string, Function<T, Painter>...generators) {
+		Map<String, Function<T,Painter>[]> map = new HashMap<>();
+		
+		map.put("*", generators);
+		
+		return new Pair<>(string, map);
+	}
+
+	@SafeVarargs
+	public static <T extends AOSMItem> Pair<String, Function<T,Painter>[]> entry(String value, Function<T,Painter>...generators) {
+		return new Pair<>(value, generators);
+	}
+	
+	public static <T extends AOSMItem> Pair<String, Function<T,Painter>[]> entrySame(String value) {
+		return new Pair<>(value, null);
 	}
 }

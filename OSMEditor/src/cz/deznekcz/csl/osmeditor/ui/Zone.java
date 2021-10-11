@@ -9,23 +9,36 @@ import cz.deznekcz.csl.osmeditor.data.OSMRelation;
 import javafx.geometry.Bounds;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.util.Pair;
 
 public class Zone implements Painter {
 
 	private OSMRelation relation;
 	private Color borderColor;
-	private Color fillColor;
+	private Paint filament;
+
+	public Zone(OSMRelation relation, Color fillColor) {
+		this(relation, fillColor, fillColor.darker());
+	}
 
 	public Zone(OSMRelation relation, Color fillColor, Color borderColor) {
-		this.relation = relation;
-		this.borderColor = borderColor;
-		this.fillColor = fillColor.interpolate(
+		this(
+			relation,
+			(Paint) fillColor.interpolate(
 				Color.hsb(
 						fillColor.getHue(),
 						fillColor.getSaturation(),
 						fillColor.getOpacity(), 0)
-				, 0.5);
+				, 0.5),
+			borderColor
+		);
+	}
+	
+	public Zone(OSMRelation relation, Paint filament, Color borderColor) {
+		this.relation = relation;
+		this.borderColor = borderColor;
+		this.filament = filament;
 	}
 
 	@Override
@@ -65,7 +78,7 @@ public class Zone implements Painter {
 		n = 0; for (var i : x) xa[n++] = i;
 		n = 0; for (var i : y) ya[n++] = i;
 		
-		gc.setFill(fillColor);
+		gc.setFill(filament);
 		gc.fillPolygon(xa, ya, y.size());
 	}
 

@@ -46,7 +46,7 @@ import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
 public class OSMEditor extends Application {
-	private static final String PROP_PATH = System.getProperty("APPDATA") + "\\OSMEditor\\lastrun.cfg";
+	private static final String PROP_PATH = System.getenv("APPDATA") + "\\OSMEditor\\lastrun.cfg";
 	private static final String PROP_KEY_MAP_FILE = "map";
 	private static final String PROP_KEY_CONF = "render";
 	private static final String PROP_KEY_OSM_LOC = "osmloc";
@@ -59,6 +59,7 @@ public class OSMEditor extends Application {
 	private Runner taskThread;
 	private OSMConfig config;
 	private Canvas canvas;
+	private ZoomableScrollPane view;
 
 	public static void main(String[] args) {
 		OSMEditor.launch(args);
@@ -75,7 +76,7 @@ public class OSMEditor extends Application {
 		} catch (Exception e) {
 			// No older instance was running
 			// Default properties
-			properties.put(PROP_KEY_CONF, System.getProperty("APPDATA") + "\\OSMEditor\\render.cfg");
+			properties.put(PROP_KEY_CONF, System.getenv("APPDATA") + "\\OSMEditor\\render.cfg");
 			config = new OSMConfig();
 		}
 		
@@ -83,12 +84,12 @@ public class OSMEditor extends Application {
 		BorderPane borderFrame = new BorderPane();
 		
 		canvas = new Canvas(9000, 9000);
-		ScrollPane sp = new ZoomableScrollPane(canvas);
-		sp.setPrefViewportHeight(900);
-		sp.setPrefViewportWidth(900);
+		view = new ZoomableScrollPane(canvas);
+		view.setPrefViewportHeight(900);
+		view.setPrefViewportWidth(900);
 		
 		borderFrame.setTop(menuBar());
-		borderFrame.setCenter(sp);
+		borderFrame.setCenter(view);
 		
 		Scene scene = new Scene(borderFrame);
 		
@@ -103,8 +104,8 @@ public class OSMEditor extends Application {
 		primaryStage.show();
 		primaryStage.setOnCloseRequest(this::closing);
 
-		System.out.println(sp.getHeight());
-		System.out.println(sp.getWidth());
+		System.out.println(view.getHeight());
+		System.out.println(view.getWidth());
 		
 		taskThread = new TaskInfo.Runner("Tasks");
 		if (new File(properties.getProperty(PROP_KEY_CONF)).exists()) {
@@ -171,7 +172,7 @@ public class OSMEditor extends Application {
 	private void openFile(ActionEvent actionevent) {
 		FileChooser fc = new FileChooser();
 		fc.getExtensionFilters().add(new ExtensionFilter("OSM map file (*.osm)", "*.osm"));
-		if (properties.contains(PROP_KEY_OSM_LOC))
+		if (properties.containsKey(PROP_KEY_OSM_LOC))
 			fc.setInitialDirectory(new File(properties.getProperty(PROP_KEY_OSM_LOC)));
 		
 		File osmDataFile = fc.showOpenDialog(this.primaryStage);
@@ -227,7 +228,7 @@ public class OSMEditor extends Application {
 	private void exportPNG(ActionEvent actionevent) {
 		FileChooser fc = new FileChooser();
 		fc.getExtensionFilters().add(new ExtensionFilter("Portable bitmap file (*.png)", "*.png"));
-		if (properties.contains(PROP_KEY_PNG_LOC))
+		if (properties.containsKey(PROP_KEY_PNG_LOC))
 			fc.setInitialDirectory(new File(properties.getProperty(PROP_KEY_PNG_LOC)));
 		
 		File osmDataFile = fc.showSaveDialog(this.primaryStage);
@@ -278,6 +279,7 @@ public class OSMEditor extends Application {
 		
 		var snapshot = new TaskInfo.Wait<WritableImage>();
 		Platform.runLater(()->{
+			view.resetView();
 			setRender(canvas, render);
 			WritableImage wim = new WritableImage(9000,9000);
 			var params = new SnapshotParameters();

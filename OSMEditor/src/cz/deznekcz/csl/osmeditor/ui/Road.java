@@ -1,6 +1,7 @@
 package cz.deznekcz.csl.osmeditor.ui;
 
 import cz.deznekcz.csl.osmeditor.data.OSM;
+import cz.deznekcz.csl.osmeditor.data.OSMConfig;
 import cz.deznekcz.csl.osmeditor.data.OSMWay;
 import javafx.geometry.Bounds;
 import javafx.scene.canvas.GraphicsContext;
@@ -15,6 +16,10 @@ public class Road implements Painter {
 	private Color borderColor;
 	private OSMWay way;
 
+	public Road(OSMWay way, int size, Color fillColor) {
+		this(way, size, fillColor, fillColor.darker());
+	}
+	
 	public Road(OSMWay way, int size, Color fillColor, Color borderColor) {
 		this.size = size;
 		this.outerSize = size + 2;
@@ -41,6 +46,14 @@ public class Road implements Painter {
 			i++;
 		}
 
+		if (OSMConfig.is(way.getTags(), "bridge", "yes"))
+		{
+			gc.setStroke(Color.GRAY);
+			gc.setLineWidth(outerSize+2);
+			gc.setLineCap(StrokeLineCap.BUTT);
+			gc.strokePolyline(x, y, x.length);
+		}
+		
 		gc.setStroke(borderColor);
 		gc.setLineWidth(outerSize);
 		gc.setLineCap(StrokeLineCap.BUTT);
