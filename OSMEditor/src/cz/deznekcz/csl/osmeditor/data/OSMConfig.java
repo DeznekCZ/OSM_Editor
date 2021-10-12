@@ -31,7 +31,8 @@ public class OSMConfig {
 						entry("farmland", (relation) -> new Zone(relation, Color.YELLOW))
 				),
 				group("natural", 
-						entry("water", (relation) -> new Zone(relation, Color.LIGHTSKYBLUE))
+						entry("water", (relation) -> new Zone(relation, Color.LIGHTSKYBLUE)),
+						entrySame("pond")
 				)
 		);
 		
@@ -45,7 +46,8 @@ public class OSMConfig {
 						entrySame("tertiary_link"),
 						entry("unclassified", (way) -> new Road(way, 4, Color.WHITE)),
 						entrySame("residential"),
-						entrySame("service")
+						entrySame("service"),
+						entry("track", (way) -> new Line(way, 1, Color.BROWN).dashed(2,1))
 				),
 				group("railway",
 						entry("rail", (way) -> new ExtendedLine(
@@ -111,6 +113,20 @@ public class OSMConfig {
 				),
 				groupAny("building",
 						(way) -> new Shape(way, Color.RED.brighter())
+				),
+				group("waterway",
+						entry("river",	(way) -> new Line(way, 3, Color.LIGHTSKYBLUE.darker()).tunelable()),
+						entry("stream",	(way) -> new Line(way, 2, Color.LIGHTSKYBLUE.darker()).tunelable()),
+						entrySame("canal"),
+						entry("ditch", (way) -> new Line(way, 1, Color.LIGHTSKYBLUE.darker()).tunelable())
+				),
+				group("natural", 
+						entry("water", (way) -> new Shape(way, Color.LIGHTSKYBLUE))
+				),
+				group("landuse", 
+						entry("forest", (way) -> new Shape(way, Color.DARKGREEN)),
+						entry("meadow", (way) -> new Shape(way, Color.YELLOWGREEN)),
+						entry("farmland", (way) -> new Shape(way, Color.YELLOW))
 				)
 		);
 		
