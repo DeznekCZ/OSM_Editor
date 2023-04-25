@@ -1,7 +1,11 @@
 package cz.deznekcz.javafx.ui.utils;
 
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 
 public class MenuConstructor {
@@ -33,8 +37,8 @@ public class MenuConstructor {
 		return new MenuConstructor(string, this, menuBarConstuctor);
 	}
 
-	public ItemConstructor item(String string) {
-		return new ItemConstructor(string, this, menuBarConstuctor);
+	public ItemConstructor<MenuItem> item(String string) {
+		return new ItemConstructor<MenuItem>(string, this, menuBarConstuctor, MenuItem::new);
 	}
 
 	public MenuConstructor separator() {
@@ -52,5 +56,14 @@ public class MenuConstructor {
 
 	public MenuBarConstuctor next() {
 		return menuBarConstuctor;
+	}
+	
+	public MenuConstructor edit(Consumer<Menu> edit) {
+		edit.accept(this.menu);
+		return this;
+	}
+
+	public <T extends MenuItem> ItemConstructor<T> item(String string, Supplier<T> type) {
+		return new ItemConstructor<T>(string, this, menuBarConstuctor, type);
 	}
 }

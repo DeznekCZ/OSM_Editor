@@ -134,9 +134,10 @@ public class OSMConfig {
 				group("place", 
 						entry("village", (node) -> (gc,map,bd) -> {
 							var point = Painter.GetPoint(node, map, bd);
+							var name = node.getTags().getOrDefault("name", "<UNSET>");
 							gc.setStroke(Color.BLACK);
 							gc.setLineWidth(1);
-							gc.strokeText(node.getTags().get("name"), point.getX(), point.getY());
+							gc.strokeText(name, point.getX(), point.getY());
 						})
 				),
 				group("power",

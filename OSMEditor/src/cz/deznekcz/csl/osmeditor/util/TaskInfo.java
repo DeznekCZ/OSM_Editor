@@ -5,8 +5,12 @@ import java.util.Queue;
 import java.util.function.Consumer;
 
 import javafx.application.Platform;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableStringValue;
 
 public class TaskInfo {
 
@@ -38,12 +42,37 @@ public class TaskInfo {
 		private Thread thread;
 		private boolean keepRunning;
 		private Queue<TaskInfo> tasks;
+		private ObservableStringValue statusInfo;
+		public Property<TaskStatus> taskStatus;
+		public StringProperty taskName;
+		public StringProperty taskMessage;
 
-		public Runner(String name) {
+		public Runner(String name, StringProperty statusInfo) {
+			if (!Platform.isFxApplicationThread())
+				throw new IllegalAccessError("Runner must be started from FXApplication thread!");
+				
 			this.name = name;
 			this.tasks = new LinkedList<>();
 			this.keepRunning = true;
-			this.thread = new Thread(this, name);
+
+			this.taskName = new SimpleStringProperty();
+			this.taskMessage = new SimpleStringProperty();
+			this.taskStatus = new SimpleObjectProperty<>(TaskStatus.WAITING);
+			
+			this.statusInfo = Bindings.concat(
+						taskStatus,
+						
+						Bindings.when(taskName.isEmpty())
+							.then("")
+							.otherwise(Bindings.concat(" (",	taskName, ")")),
+							
+						Bindings.when(taskMessage.isEmpty())
+							.then("")
+							.otherwise(Bindings.concat(": ", taskMessage))
+					);
+			statusInfo.bind(this.statusInfo);
+			
+			this.thread = new Thread(this, this.name);
 			this.thread.start();
 		}
 
@@ -69,18 +98,33 @@ public class TaskInfo {
 				}
 				
 				if (taskToRun != null) {
-					final TaskInfo ti = taskToRun;
-					Platform.runLater(() -> {
-						Alert dialog = new Alert(AlertType.INFORMATION);
-						ti.dialog = dialog;
-						dialog.setHeaderText(null);
-						dialog.setContentText(ti.getMessage());
-						dialog.setTitle(ti.name + ": " + ti.getStatus());
-						dialog.show();
-					});
+					setName(taskToRun.getName());
+					setMessage(null);
+					setStatus(TaskStatus.RUNNING);
 					taskToRun.run();
 				}
 			}
+		}
+
+		public void setName(String name) {
+			if (Platform.isFxApplicationThread())
+				taskName.setValue(name);
+			else
+				Platform.runLater(() -> taskName.setValue(name));
+		}
+
+		public void setMessage(String message) {
+			if (Platform.isFxApplicationThread())
+				taskMessage.setValue(message);
+			else
+				Platform.runLater(() -> taskMessage.setValue(message));
+		}
+
+		public void setStatus(TaskStatus status) {
+			if (Platform.isFxApplicationThread())
+				taskStatus.setValue(status);
+			else
+				Platform.runLater(() -> taskStatus.setValue(status));
 		}
 
 		public synchronized void stop() {
@@ -88,36 +132,44 @@ public class TaskInfo {
 		}
 
 		public synchronized void newTask(String taskname, Consumer<TaskInfo> action) {
-			tasks.add(new TaskInfo(taskname, action));
+			tasks.add(new TaskInfo(taskname, action, this));
 		}
 	}
 
 	private String message;
 	private TaskStatus status;
-	private Alert dialog;
 	private String name;
 	private Consumer<TaskInfo> action;
+	private Runner manager;
 	
-	public TaskInfo(String name, Consumer<TaskInfo> action) {
+	public TaskInfo(String name, Consumer<TaskInfo> action, TaskInfo.Runner manager) {
 		this.name = name;
 		this.message = "";
 		this.status = TaskStatus.WAITING;
 		this.action = action;
+		this.manager = manager;
+	}
+	
+	public String getName() {
+		return name;
 	}
 
 	public synchronized void setMessage(String message) {
 		this.message = message;
 		
-		if (dialog != null) {
-			Platform.runLater(() -> dialog.setContentText(message));
-		}
+		if (Platform.isFxApplicationThread())
+			manager.taskMessage.setValue(message);
+		else
+			Platform.runLater(() -> manager.taskMessage.setValue(message));
 	}
 
 	public synchronized void setStatus(TaskStatus status) {
 		this.status = status;
-		if (dialog != null) {
-			Platform.runLater(() -> dialog.setTitle(name + ": " + status));
-		}
+		
+		if (Platform.isFxApplicationThread())
+			manager.taskStatus.setValue(status);
+		else
+			Platform.runLater(() -> manager.taskStatus.setValue(status));
 	}
 
 	public synchronized String getMessage() {

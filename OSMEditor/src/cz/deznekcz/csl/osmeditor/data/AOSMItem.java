@@ -43,6 +43,18 @@ public abstract class AOSMItem {
 	public String getTimestamp() {
 		return timestamp;
 	}
+
+	public boolean isProposal() {
+		return getTags().containsKey("proposed");
+	}
+
+	public String getProposeType() {
+		for (var tag : tags.entrySet()) {
+			if (tag.getValue().equals("proposed"))
+				return tag.getKey();
+		}
+		return null;
+	}
 	
 	public AOSMItem(Element element) {
 		id = Long.parseLong(element.getAttribute("id"));
