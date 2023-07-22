@@ -24,7 +24,7 @@ public class Shape implements Painter {
 						fillColor.getForeground().getSaturation(),
 						fillColor.getForeground().getOpacity(), 0)
 				, 0.5),
-			fillColor.getForeground()
+			fillColor.getBackground()
 		);
 	}
 	

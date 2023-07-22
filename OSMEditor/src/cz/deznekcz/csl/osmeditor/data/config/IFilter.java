@@ -9,16 +9,21 @@ public interface IFilter<T extends AOSMItem> {
 
     List<Painter> apply(T node);
 
-    @SafeVarargs
-    static <T extends AOSMItem> IFilter<T> of(IGroup<T>... groups) {
-        return (node) -> {
-            List<Painter> generators = new ArrayList<>();
+    record Filter<T extends AOSMItem>(IGroup<T>[] groups) implements IFilter<T> {
+        @Override
+        public List<Painter> apply(T node) {
+            List<Painter> painters = new ArrayList<>();
 
             for (var entry : groups) {
-                entry.apply(node, generators);
+                entry.apply(node, painters);
             }
 
-            return generators;
-        };
+            return painters;
+        }
+    }
+
+    @SafeVarargs
+    static <T extends AOSMItem> IFilter<T> of(final IGroup<T>... groups) {
+        return new Filter(groups);
     }
 }

@@ -7,6 +7,7 @@ import cz.deznekcz.csl.osmeditor.data.config.Painter;
 import javafx.geometry.Bounds;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.StrokeLineCap;
 
 public class Road implements Painter {
@@ -53,11 +54,29 @@ public class Road implements Painter {
 			gc.setLineWidth(outerSize);
 			gc.setLineCap(StrokeLineCap.BUTT);
 			gc.strokePolyline(x, y, x.length);
+
 			if (tunnel) {
-				gc.setStroke(fillColor.getForeground());
-				gc.setLineWidth(size);
-				gc.setLineCap(StrokeLineCap.BUTT);
-				gc.strokePolyline(x, y, x.length);
+				if (fillColor.hasDashedBackground()) {
+					gc.setStroke(fillColor.getDashBackground());
+					gc.setLineWidth(size);
+					gc.setLineCap(StrokeLineCap.BUTT);
+					gc.strokePolyline(x, y, x.length);
+				}
+
+				if (fillColor.isDashed()) {
+					var dash = gc.getLineDashes();
+					gc.setStroke(fillColor.getForeground());
+					gc.setLineWidth(size);
+					gc.setLineCap(StrokeLineCap.BUTT);
+					gc.setLineDashes(fillColor.getDashes());
+					gc.strokePolyline(x, y, x.length);
+					gc.setLineDashes(dash);
+				} else {
+					gc.setStroke(fillColor.getForeground());
+					gc.setLineWidth(size);
+					gc.setLineCap(StrokeLineCap.BUTT);
+					gc.strokePolyline(x, y, x.length);
+				}
 			}
 		} else {
 			if (bridge) {
@@ -71,10 +90,27 @@ public class Road implements Painter {
 				gc.strokePolyline(x, y, x.length);
 			}
 			if (!tunnel) {
-				gc.setStroke(fillColor.getForeground());
-				gc.setLineWidth(size);
-				gc.setLineCap(StrokeLineCap.BUTT);
-				gc.strokePolyline(x, y, x.length);
+				if (fillColor.hasDashedBackground()) {
+					gc.setStroke(fillColor.getDashBackground());
+					gc.setLineWidth(size);
+					gc.setLineCap(StrokeLineCap.BUTT);
+					gc.strokePolyline(x, y, x.length);
+				}
+
+				if (fillColor.isDashed()) {
+					var dash = gc.getLineDashes();
+					gc.setStroke(fillColor.getForeground());
+					gc.setLineWidth(size);
+					gc.setLineCap(StrokeLineCap.BUTT);
+					gc.setLineDashes(fillColor.getDashes());
+					gc.strokePolyline(x, y, x.length);
+					gc.setLineDashes(dash);
+				} else {
+					gc.setStroke(fillColor.getForeground());
+					gc.setLineWidth(size);
+					gc.setLineCap(StrokeLineCap.BUTT);
+					gc.strokePolyline(x, y, x.length);
+				}
 			}
 		}
 	}

@@ -9,6 +9,7 @@ import cz.deznekcz.csl.osmeditor.data.OSM;
 import cz.deznekcz.csl.osmeditor.data.OSMRelation;
 import cz.deznekcz.csl.osmeditor.data.config.Painter;
 import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -50,62 +51,77 @@ public class Zone implements Painter {
 	public void consume(GraphicsContext gc, OSM map, Bounds bd, boolean background) {
 
 		if (background) {
-			List<Double> x = new ArrayList<>();
-			List<Double> y = new ArrayList<>();
+			drawBackground(gc, map, bd);
+		} else {
+			drawForeground(gc, map, bd);
+		}
+	}
 
-			for (var member : relation.getMembers()) {
-				switch (member.getType()) {
-					case "way":
-						switch (member.getRole()) {
-							case "outer":
-								var way = map.getWays().get(member.getRef());
-								if (way != null) {
-									var line = new Line(way, 1, Drawer.of(this.borderColor));
-									line.calculatePoints(map, bd);
-									for (var i : line.x) x.add(i);
-									for (var i : line.y) y.add(i);
-								}
-								break;
-							default:
-								break;
-						}
-						break;
+	private void drawBackground(GraphicsContext gc, OSM map, Bounds bd) {
+		List<Double> lon = new ArrayList<>();
+		List<Double> lat = new ArrayList<>();
 
-					default:
-						break;
-				}
+		for (var member : relation.getMembers()) {
+			switch (member.getType()) {
+				case "way":
+					switch (member.getRole()) {
+						case "outer":
+							// collect all points
+							map.getWays().get(member.getRef())
+								.getNodes()
+									.stream()
+									.map(map.getNodes()::get)
+									.forEach(node -> {
+										lon.add(node.getLon());
+										lat.add(node.getLat());
+									});
+							break;
+						default:
+							break;
+					}
+					break;
 
+				default:
+					break;
 			}
 
-			double[] xa = new double[x.size()];
-			double[] ya = new double[y.size()];
+		}
 
-			int n;
-			n = 0; for (var i : x) xa[n++] = i;
-			n = 0; for (var i : y) ya[n++] = i;
+		double[] xa = new double[lon.size()];
+		double[] ya = new double[lat.size()];
 
-			gc.setFill(filament);
-			gc.fillPolygon(xa, ya, y.size());
-		} else {
-			for (var member : relation.getMembers()) {
-				switch (member.getType()) {
-					case "way":
-						switch (member.getRole()) {
-							case "outer":
-								var way = map.getWays().get(member.getRef());
-								if (way != null) {
-									var line = new Line(way, 1, Drawer.of(this.borderColor));
-									line.consume(gc, map, bd, false);
-								}
-								break;
-							default:
-								break;
-						}
-						break;
+		for (int i = 0; i < lon.size(); i++) {
+			var mapWidth = map.getMaxlon() - map.getMinlon();
+			var mapHeight = map.getMaxlat() - map.getMinlat();
+			var posX = lon.get(i) - map.getMinlon();
+			var posY = lat.get(i) - map.getMinlat();
+			xa[i] = bd.getWidth() * posX / mapWidth;
+			ya[i] = bd.getHeight() - bd.getHeight() * posY / mapHeight;
+		}
 
-					default:
-						break;
-				}
+		gc.setFill(filament);
+		gc.fillPolygon(xa, ya, lat.size());
+	}
+
+	private void drawForeground(GraphicsContext gc, OSM map, Bounds bd) {
+		for (var member : relation.getMembers()) {
+			switch (member.getType()) {
+				case "way":
+					switch (member.getRole()) {
+						case "outer":
+							var way = map.getWays().get(member.getRef());
+							if (way != null) {
+								var line = new Line(way, 1, Drawer.of(this.borderColor));
+								line.consume(gc, map, bd, false);
+							}
+							break;
+						default:
+							break;
+					}
+					break;
+
+				default:
+					break;
 			}
 		}
 	}

@@ -32,7 +32,20 @@ public class Line implements Painter {
 	public void consume(GraphicsContext gc, OSM map, Bounds bd, boolean background) {
 		if (background) return;
 
-		calculatePoints(map, bd);
+		var count = way.getNodes().size();
+		x = new double[count];
+		y = new double[count];
+
+		var i = 0;
+		for (var nodeIndex : way.getNodes()) {
+			var innerNode = map.getNodes().get(nodeIndex);
+			var point = Painter.GetPoint(innerNode, map, bd);
+
+			x[i] = point.getX();
+			y[i] = point.getY();
+
+			i++;
+		}
 
 		if (tunelable && tunnel)
 			gc.setStroke(fillColor.getForeground().interpolate(Color.TRANSPARENT, 0.5));
@@ -62,24 +75,6 @@ public class Line implements Painter {
 		}
 		else {
 			gc.strokePolyline(x, y, x.length);
-		}
-	}
-
-	protected void calculatePoints(OSM map, Bounds bd) {
-		
-		var count = way.getNodes().size();
-		x = new double[count];
-		y = new double[count];
-		
-		var i = 0;
-		for (var nodeIndex : way.getNodes()) {
-			var innerNode = map.getNodes().get(nodeIndex);
-			var point = Painter.GetPoint(innerNode, map, bd);
-
-			x[i] = point.getX();
-			y[i] = point.getY();
-					
-			i++;
 		}
 	}
 

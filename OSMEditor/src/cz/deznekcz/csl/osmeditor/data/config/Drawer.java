@@ -29,8 +29,8 @@ public class Drawer {
 
     public static Drawer of(Color color) {
         Drawer drawer = new Drawer();
-        drawer.background = color;
-        drawer.foreground = color.darker();
+        drawer.background = color.darker();
+        drawer.foreground = color;
         return drawer;
     }
 

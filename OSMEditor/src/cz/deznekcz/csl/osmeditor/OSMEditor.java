@@ -220,10 +220,6 @@ public class OSMEditor extends Application {
 	}
 
 	private void setRender(/*Canvas canvas, */OSMRender dataToRender) {
-//		var gc = canvas.getGraphicsContext2D();
-//		
-//		gc.clearRect(0, 0, 9000, 9000);
-//		
 		var drawers = new ArrayList<Painter>(); 
 		
 		for (int i = dataToRender.getLowLayerIndex(); i <= dataToRender.getTopLayerIndex(); i++) {
@@ -320,7 +316,7 @@ public class OSMEditor extends Application {
 						render.getNodeLayer().add(nodeInfo);
 				}
 			);
-		
+
 		osmData.getWays().forEach(
 				(id, node) -> {
 					OSMWayInfo wayInfo = config.getInfo(node);
@@ -336,7 +332,7 @@ public class OSMEditor extends Application {
 						render.getRelationLayer().add(wayInfo);
 				}
 			);
-		
+
 		return render;
 	}
 

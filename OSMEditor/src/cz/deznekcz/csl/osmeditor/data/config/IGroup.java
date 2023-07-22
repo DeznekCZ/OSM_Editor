@@ -9,15 +9,9 @@ import java.util.Map;
 
 public interface IGroup<T extends AOSMItem> {
 
-    @SafeVarargs
-    static <T extends AOSMItem> IGroup<T> of(String key, IEntry<T>... entries) {
-        Map<String, IEntry<T>> map = new HashMap<>();
-        for (IEntry<T> entry: entries) {
-            for (String keyEntry: entry.keys()) {
-                map.put(keyEntry, entry);
-            }
-        }
-        return (node, painters) -> {
+    record EntryGroup<T extends AOSMItem>(String key, Map<String, IEntry<T>> map) implements IGroup<T> {
+        @Override
+        public void apply(T node, List<Painter> painters) {
             String tagValue;
             if ((tagValue = node.getStringTag(key, null)) == null)
                 return; // no painter for this group;
@@ -25,17 +19,33 @@ public interface IGroup<T extends AOSMItem> {
             IEntry<T> entry = map.getOrDefault(tagValue, null);
             if (entry != null)
                 entry.apply(node, painters);
-        };
+        }
     }
 
     @SafeVarargs
-    static <T extends AOSMItem> IGroup<T> of(String key, Generator<T>... generators) {
-        return (node, painters) -> {
-            if (node.hasTag(key))
+    static <T extends AOSMItem> IGroup<T> of(final String key, final IEntry<T>... entries) {
+        final Map<String, IEntry<T>> map = new HashMap<>();
+        for (IEntry<T> entry: entries) {
+            for (String keyEntry: entry.keys()) {
+                map.put(keyEntry, entry);
+            }
+        }
+        return new EntryGroup<>(key, map);
+    }
+
+    record GeneratorGroup<T extends AOSMItem>(String key, Generator<T>[] generators) implements IGroup<T> {
+        @Override
+        public void apply(T node, List<Painter> painters) {
+            if (!node.hasTag(key))
                 return; // no painter for this group;
 
             Arrays.stream(generators).map(g -> g.apply(node)).forEach(painters::add);
-        };
+        }
+    }
+
+    @SafeVarargs
+    static <T extends AOSMItem> IGroup<T> of(final String key, final Generator<T>... generators) {
+        return new GeneratorGroup<>(key, generators);
     }
 
     void apply(T node, List<Painter> painters);

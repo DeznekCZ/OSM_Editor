@@ -42,7 +42,8 @@ public class OSMConfig {
                         IEntry.of("farmland", Zone.of(Colors.AREA_FARMLAND))
                 ),
                 IGroup.of("natural",
-                        IEntry.of(List.of("water", "pond"), Zone.of(Colors.AREA_WATER))
+                        IEntry.of(List.of("water", "pond"), Zone.of(Colors.AREA_WATER)),
+                        IEntry.of("forest", Zone.of(Colors.AREA_FOREST))
                 )
         );
 
