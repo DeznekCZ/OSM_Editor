@@ -2,7 +2,7 @@ package cz.deznekcz.csl.osmeditor.data;
 
 import java.util.List;
 
-import cz.deznekcz.csl.osmeditor.ui.Painter;
+import cz.deznekcz.csl.osmeditor.data.config.Painter;
 
 public class OSMRelationInfo {
 

@@ -21,7 +21,7 @@ import cz.deznekcz.csl.osmeditor.util.TaskInfo;
 import cz.deznekcz.csl.osmeditor.util.TaskInfo.Runner;
 import cz.deznekcz.csl.osmeditor.util.TaskStatus;
 import cz.deznekcz.javafx.ui.utils.MenuBarConstuctor;
-import cz.deznekcz.csl.osmeditor.ui.Painter;
+import cz.deznekcz.csl.osmeditor.data.config.Painter;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -254,7 +254,10 @@ public class OSMEditor extends Application {
 			gc.clearRect(0, 0, 9000, 9000);
 			gc.translate(-cutX, -cutY);
 			drawers.forEach((action) -> {
-				action.consume(gc, osmData, canvasBounds);
+				action.consume(gc, osmData, canvasBounds, true);
+			});
+			drawers.forEach((action) -> {
+				action.consume(gc, osmData, canvasBounds, false);
 			});
 			gc.setTransform(new Affine());
 			
@@ -272,12 +275,14 @@ public class OSMEditor extends Application {
 		
 		info.setMessage("Map is drawing");
 		
-		info.setMessage("Map is loaded");
-		info.setStatus(TaskStatus.SUCCESS);
 		properties.setProperty(PROP_KEY_MAP_FILE, osmDataFile.getAbsolutePath());
 
 		final OSMRender render = dataToRender(info, this.config);
-		Platform.runLater(() -> setRender(/*canvas, */render));
+		Platform.runLater(() -> {
+			setRender(/*canvas, */render);
+			info.setMessage("Map is loaded");
+			info.setStatus(TaskStatus.SUCCESS);
+		});
 	}
 
 	private void loadConfig(TaskInfo info, File file) {

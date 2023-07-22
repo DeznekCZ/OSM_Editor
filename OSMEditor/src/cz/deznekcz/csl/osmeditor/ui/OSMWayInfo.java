@@ -1,5 +1,7 @@
 package cz.deznekcz.csl.osmeditor.ui;
 
+import cz.deznekcz.csl.osmeditor.data.config.Painter;
+
 import java.util.List;
 
 public class OSMWayInfo {

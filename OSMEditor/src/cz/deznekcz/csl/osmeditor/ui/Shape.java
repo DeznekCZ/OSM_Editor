@@ -1,7 +1,9 @@
 package cz.deznekcz.csl.osmeditor.ui;
 
-import cz.deznekcz.csl.osmeditor.data.OSM;
-import cz.deznekcz.csl.osmeditor.data.OSMWay;
+import cz.deznekcz.csl.osmeditor.data.*;
+import cz.deznekcz.csl.osmeditor.data.config.Drawer;
+import cz.deznekcz.csl.osmeditor.data.config.Generator;
+import cz.deznekcz.csl.osmeditor.data.config.Painter;
 import javafx.geometry.Bounds;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -13,20 +15,16 @@ public class Shape implements Painter {
 	private Color borderColor;
 	private Paint filament;
 
-	public Shape(OSMWay way, Color fillColor) {
-		this(way, fillColor, fillColor.darker());
-	}
-
-	public Shape(OSMWay way, Color fillColor, Color borderColor) {
+	public Shape(OSMWay way, Drawer fillColor) {
 		this(
 			way,
-			(Paint) fillColor.interpolate(
+			fillColor.getForeground().interpolate(
 				Color.hsb(
-						fillColor.getHue(),
-						fillColor.getSaturation(),
-						fillColor.getOpacity(), 0)
+						fillColor.getForeground().getHue(),
+						fillColor.getForeground().getSaturation(),
+						fillColor.getForeground().getOpacity(), 0)
 				, 0.5),
-			borderColor
+			fillColor.getForeground()
 		);
 	}
 	
@@ -37,12 +35,11 @@ public class Shape implements Painter {
 	}
 
 	@Override
-	public void consume(GraphicsContext gc, OSM map, Bounds bd) {
-
+	public void consume(GraphicsContext gc, OSM map, Bounds bd, boolean background) {
 		var count = way.getNodes().size();
 		var x = new double[count];
 		var y = new double[count];
-		
+
 		var i = 0;
 		for (var nodeIndex : way.getNodes()) {
 			var innerNode = map.getNodes().get(nodeIndex);
@@ -50,16 +47,21 @@ public class Shape implements Painter {
 
 			x[i] = point.getX();
 			y[i] = point.getY();
-					
+
 			i++;
 		}
-		
-		gc.setFill(filament);
-		gc.fillPolygon(x, y, y.length);
-		
-		gc.setStroke(borderColor);
-		gc.setLineWidth(1);
-		gc.strokePolyline(x, y, y.length);
+
+		if (background) {
+			gc.setFill(filament);
+			gc.fillPolygon(x, y, y.length);
+		} else {
+			gc.setStroke(borderColor);
+			gc.setLineWidth(1);
+			gc.strokePolyline(x, y, y.length);
+		}
 	}
 
+	public static Generator<OSMWay> of(Drawer drawer) {
+		return (way) -> new Shape(way, drawer);
+	}
 }

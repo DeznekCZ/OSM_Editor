@@ -32,5 +32,4 @@ public class OSMWay extends AOSMItem {
 		// TODO jinak
 		return Integer.parseInt(getTags().getOrDefault("layer", "0"));
 	}
-
 }

@@ -1,8 +1,9 @@
 package cz.deznekcz.csl.osmeditor.ui;
 
-import cz.deznekcz.csl.osmeditor.data.OSM;
-import cz.deznekcz.csl.osmeditor.data.OSMConfig;
-import cz.deznekcz.csl.osmeditor.data.OSMWay;
+import cz.deznekcz.csl.osmeditor.data.*;
+import cz.deznekcz.csl.osmeditor.data.config.Drawer;
+import cz.deznekcz.csl.osmeditor.data.config.Generator;
+import cz.deznekcz.csl.osmeditor.data.config.Painter;
 import javafx.geometry.Bounds;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -11,36 +12,50 @@ import javafx.scene.shape.StrokeLineCap;
 public class Line implements Painter {
 
 	protected OSMWay way;
-	protected Color fillColor;
-	protected int size;
+	protected Drawer fillColor;
+	protected float size;
 	protected double[] x;
 	protected double[] y;
-	protected double[] dash;
 	protected boolean tunelable;
+	private final boolean tunnel;
 
-	public Line(OSMWay way, int size, Color fillColor) {
+	public Line(OSMWay way, float size, Drawer fillColor) {
 		this.way = way;
 		this.size = size;
 		this.fillColor = fillColor;
-		this.dash = null;
 		this.tunelable = false;
+
+		tunnel = OSMConfig.is(way.getTags(), "tunel", "yes");
 	}
 
 	@Override
-	public void consume(GraphicsContext gc, OSM map, Bounds bd) {
+	public void consume(GraphicsContext gc, OSM map, Bounds bd, boolean background) {
+		if (background) return;
+
 		calculatePoints(map, bd);
 
-		if (tunelable && OSMConfig.is(way.getTags(), "tunel", "yes"))
-			gc.setStroke(fillColor.interpolate(Color.TRANSPARENT, 0.5));
+		if (tunelable && tunnel)
+			gc.setStroke(fillColor.getForeground().interpolate(Color.TRANSPARENT, 0.5));
 		else
-			gc.setStroke(fillColor);
+			gc.setStroke(fillColor.getForeground());
 		gc.setLineWidth(size);
 		
-		if (dash != null) {
+		if (fillColor.isDashed()) {
+			// has dash background
+			if (fillColor.hasDashedBackground()) {
+				var defaultStroke = gc.getStroke();
+				var defaultCap = gc.getLineCap();
+				gc.setStroke(fillColor.getDashBackground());
+				gc.setLineCap(StrokeLineCap.BUTT);
+				gc.strokePolyline(x, y, x.length);
+				gc.setLineCap(defaultCap);
+				gc.setStroke(defaultStroke);
+			}
+
 			var defaultDashes = gc.getLineDashes();
 			var defaultCap = gc.getLineCap();
 			gc.setLineCap(StrokeLineCap.BUTT);
-			gc.setLineDashes(new double[] {5,5,5});
+			gc.setLineDashes(fillColor.getDashes());
 			gc.strokePolyline(x, y, x.length);
 			gc.setLineDashes(defaultDashes);
 			gc.setLineCap(defaultCap);
@@ -68,14 +83,18 @@ public class Line implements Painter {
 		}
 	}
 
-	public Line dashed(double...dash) {
-		this.dash = dash;
-		return this;
-	}
-
 	public Line tunelable() {
 		this.tunelable = true;
 		return this;
 	}
 
+	public static LineGenerator of(float size, Drawer fillColor) {
+		return (way) -> new Line(way, size, fillColor);
+	}
+
+	public interface LineGenerator extends Generator<OSMWay> {
+		default LineGenerator tunelable() {
+			return (way) -> ((Line)this.apply(way)).tunelable();
+		}
+	}
 }
